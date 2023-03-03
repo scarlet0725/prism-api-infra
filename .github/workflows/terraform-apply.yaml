@@ -31,7 +31,7 @@ jobs:
       - name: configure GCP credentials
         uses: 'google-github-actions/auth@v1'
         with:
-          workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/github-actions-provider'
+          workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider'
           service_account: 'github-actions@prism-370208.iam.gserviceaccount.com'
 
       - name: Terraform setup
