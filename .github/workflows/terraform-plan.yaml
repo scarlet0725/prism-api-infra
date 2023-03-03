@@ -22,11 +22,17 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       
-      - name: 'Authenticate to Google Cloud'
+      - name: configure GCP credentials
         uses: 'google-github-actions/auth@v1'
         with:
           workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/github-actions-provider'
           service_account: 'github-actions@prism-370208.iam.gserviceaccount.com'
+      
+      - name: configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
 
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
@@ -41,10 +47,6 @@ jobs:
 
       - name: Terraform plan
         id: plan
-        env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET}}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
         shell: bash
         run: terraform plan -input=false -no-color
         continue-on-error: true
