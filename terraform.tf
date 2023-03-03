@@ -1,8 +1,3 @@
-provider "google" {
-  project = "prism-prod-372103"
-  region  = "asia-northeast1"
-}
-
 terraform {
   backend "s3" {
     bucket = "irofessional-main-tfstate"
@@ -14,5 +9,14 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 4.55.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.4.0"
+    }
   }
+}
+
+provider "google" {
+  project = "prism-prod-372103"
+  region  = "asia-northeast1"
 }
