@@ -1,0 +1,93 @@
+name: Terraform plan
+
+on:
+  pull_request:
+    types: 
+      - opened
+      - synchronize
+    branches: 
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      
+      - name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v1'
+
+        - id: auth
+          uses: google-github-actions/auth@v0.4.0
+          with:
+            workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/github-actions-provider'
+            service_account: 'github-actions@prism-370208.iam.gserviceaccount.com'
+
+- id: get-gke-credentials
+  uses: google-github-actions/get-gke-credentials@v0.4.0
+  with:
+    cluster_name: my-cluster
+    location: us-central1-a
+
+- id: get-pods
+  run: kubectl get pods
+
+        github-actions@prism-prod-372103.iam.gserviceaccount.com
+
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        id: plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET}}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        shell: bash
+        run: terraform plan -input=false -no-color
+        continue-on-error: true
+
+      - uses: actions/github-script@0.9.0
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖${{ steps.validate.outputs.stdout }}
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`${process.env.PLAN}\`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+              
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Check on failures
+        if: steps.plan.outputs.status == 'failure'
+        run: exit 1
