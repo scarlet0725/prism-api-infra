@@ -24,12 +24,9 @@ jobs:
       
       - name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v1'
-
-        - id: auth
-          uses: google-github-actions/auth@v0.4.0
-          with:
-            workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/github-actions-provider'
-            service_account: 'github-actions@prism-370208.iam.gserviceaccount.com'
+        with:
+          workload_identity_provider: 'projects/489282523838/locations/global/workloadIdentityPools/github-actions/github-actions-provider'
+          service_account: 'github-actions@prism-370208.iam.gserviceaccount.com'
 
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v1
