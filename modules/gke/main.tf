@@ -25,4 +25,8 @@ resource "google_container_cluster" "cluster" {
     evaluation_mode = "DISABLED"
   }
 
+  gateway_api_config {
+    channel = "CHANNEL_STANDARD"
+  }
+
 }
