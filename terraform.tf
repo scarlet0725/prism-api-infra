@@ -13,10 +13,17 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.4.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.1.0"
+    }
   }
 }
 
 provider "google" {
   project = "prism-prod-372103"
   region  = "asia-northeast1"
+}
+
+provider "cloudflare" {
 }
