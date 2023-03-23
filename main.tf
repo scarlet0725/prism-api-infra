@@ -1,9 +1,12 @@
+#GKEクラスター用のVPCを作成
+
 module "vpc" {
   source = "./modules/vpc"
 
   name = "prism-api-vpc"
 }
 
+#VPC内にサブネットを作成
 module "subnet" {
   source = "./modules/subnet"
 
@@ -13,6 +16,7 @@ module "subnet" {
   region        = local.region
 }
 
+#Peeringする
 module "vpc_connection" {
   source = "./modules/vpc_connection"
 
@@ -20,6 +24,7 @@ module "vpc_connection" {
   private_ip_address_name = "prism-api-private-ip-address"
 }
 
+#Cloud SQLのインスタンスを作成
 module "sql" {
   source = "./modules/cloud_sql"
 
@@ -30,6 +35,7 @@ module "sql" {
   region        = local.region
 }
 
+#Cloud SQLのデータベースを作成
 module "prism_databse" {
   source = "./modules/cloud_sql_db"
 
@@ -37,6 +43,13 @@ module "prism_databse" {
   instance_name = module.sql.instance.name
 }
 
+#CloudSQL用のパスワードを作成
+resource "random_password" "password" {
+  length  = 16
+  special = true
+}
+
+#Cloud SQLのユーザーを作成
 module "prism_user" {
   source = "./modules/cloud_sql_user"
 
@@ -46,6 +59,7 @@ module "prism_user" {
   host          = "%"
 }
 
+#GKEクラスターを作成
 module "cluster" {
   source = "./modules/gke"
 
@@ -55,16 +69,13 @@ module "cluster" {
 
 }
 
-resource "random_password" "password" {
-  length  = 16
-  special = true
-}
-
+#GKEクラスター用のService Accountを作成
 resource "google_service_account" "service_account" {
   account_id   = "prism-api"
   display_name = "prism API Service Account"
 }
 
+#GKEクラスター用のService Accountに権限を付与
 module "sa_iam_binding" {
   source = "./modules/iam_role"
 
@@ -74,28 +85,36 @@ module "sa_iam_binding" {
   project_id = local.project_id
 }
 
-locals {
-  project_id   = "prism-prod-372103"
-  gke_k8s_ns   = "prism"
-  gke_k8s_service_account = "prism"
-  wi_sa_name   = "${local.gke_k8s_ns}/${local.gke_k8s_service_account}"
-}
-
+#GKEクラスター用のService AccountにWorkload Identityを付与
 resource "google_service_account_iam_binding" "wi_iam_binding" {
   service_account_id = google_service_account.service_account.name
   role               = "roles/iam.workloadIdentityUser"
   members            = ["serviceAccount:${local.project_id}.svc.id.goog[${local.wi_sa_name}]"]
 }
 
+#GKE Gateway用の証明書を作成
 module "cert" {
   source = "./modules/gcp_managed_certificate"
 
   name = "prism-api-cert"
   domains = [
-    "prism-api.irofessional.io"
+    local.api_endpoint_name
   ]
 }
 
+#GKE Gateway用のIPアドレスを作成
 resource "google_compute_global_address" "main" {
   name = "prism-gke-gateway"
+}
+
+#IPアドレスをCloudflareに登録
+resource "cloudflare_record" "record" {
+  zone_id = local.cloudflare_zone_id
+  name    = local.api_endpoint_name
+  type    = "A"
+  value   = google_compute_global_address.main.address
+  proxied = false
+  ttl     = 60
+
+  comment = "managed by terraform"
 }
